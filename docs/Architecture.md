@@ -25,9 +25,10 @@
 
 採用「以角色/業務領域為主、型別為輔」的功能導向切分（Feature-based），對應 PRD 的三種角色（Employee／Manager／HR）與 US-001～US-008。
 
-```
+```text
 src/
-├── app/                        # 應用啟動：main.ts、App.vue、全域 Provider（Pinia、Router、Element Plus）
+├── main.ts                     # 應用進入點：建立 App、掛載 Pinia / Router / Element Plus
+├── App.vue                     # 根元件
 ├── router/                     # 路由定義、角色權限守衛、路由 meta 常數
 │   ├── index.ts
 │   ├── guards.ts
@@ -90,7 +91,7 @@ src/
 
 | 模組 | 職責 | 不負責 |
 |---|---|---|
-| `app/` | 應用程式進入點、掛載全域 Plugin（Pinia、Router、Element Plus） | 業務邏輯 |
+| `main.ts` / `App.vue` | 應用程式進入點、掛載全域 Plugin（Pinia、Router、Element Plus） | 業務邏輯 |
 | `router/` | 定義路由表、路由層級的角色守衛、meta 設定 | 畫面渲染、資料請求 |
 | `stores/` | 管理跨元件共享的狀態、呼叫 `services/` 取得資料、暴露 actions/getters | 直接呼叫 Axios、畫面邏輯 |
 | `services/` | 封裝所有對外（Mock）API 呼叫，定義請求/回應型別 | 狀態管理、UI 邏輯 |
