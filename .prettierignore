@@ -12,3 +12,6 @@ tsconfig*.json
 
 # npm 自動產生內容，不應手動格式化
 package-lock.json
+
+# MSW 自動產生的 Service Worker 腳本，不應手動格式化
+public/mockServiceWorker.js
