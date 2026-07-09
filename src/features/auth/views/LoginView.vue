@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useAuth } from '../../../composables/useAuth'
+import { ROLE_HOME_ROUTES } from '../../../constants'
 import type { LoginCredentials } from '../../../types'
 
-const { login } = useAuth()
+const router = useRouter()
+const { login, role } = useAuth()
 
 const formRef = ref<FormInstance>()
 const form = reactive<LoginCredentials>({
@@ -37,6 +40,10 @@ async function handleSubmit() {
   try {
     await login(form)
     ElMessage.success('登入成功')
+
+    if (role.value) {
+      void router.push({ name: ROLE_HOME_ROUTES[role.value] })
+    }
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '登入失敗，請稍後再試'
   } finally {
