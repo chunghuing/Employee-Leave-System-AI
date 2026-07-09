@@ -6,7 +6,7 @@ import eslintConfigPrettier from 'eslint-config-prettier'
 
 export default defineConfigWithVueTs(
   {
-    ignores: ['dist/**', 'node_modules/**'],
+    ignores: ['dist/**', 'node_modules/**', 'public/mockServiceWorker.js'],
   },
   js.configs.recommended,
   pluginVue.configs['flat/recommended'],
