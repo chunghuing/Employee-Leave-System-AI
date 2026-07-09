@@ -5,6 +5,7 @@ import 'element-plus/dist/index.css'
 import './styles/main.css'
 import App from './App.vue'
 import router from './router'
+import { useAuthStore } from './stores/auth.store'
 
 async function enableMocking() {
   if (!import.meta.env.DEV) {
@@ -16,8 +17,13 @@ async function enableMocking() {
 }
 
 const app = createApp(App)
+const pinia = createPinia()
 
-app.use(createPinia())
+app.use(pinia)
+
+// 必須在 app.use(router) 之前還原登入狀態，router 安裝時會立即觸發首次導航的守衛檢查。
+useAuthStore(pinia).restoreSession()
+
 app.use(router)
 app.use(ElementPlus)
 
