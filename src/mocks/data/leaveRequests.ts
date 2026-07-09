@@ -1,0 +1,43 @@
+import type { LeaveRequest } from '../../types'
+
+export const MOCK_LEAVE_REQUESTS: LeaveRequest[] = [
+  {
+    id: 'lr-001',
+    employeeId: 'u-001',
+    employeeName: '王小明',
+    leaveTypeId: 'lt-001',
+    leaveTypeName: '年假',
+    status: 'approved',
+    startDate: '2026-06-01',
+    endDate: '2026-06-02',
+    days: 2,
+    reason: '家庭旅遊',
+    createdAt: '2026-05-20T09:00:00.000Z',
+  },
+  {
+    id: 'lr-002',
+    employeeId: 'u-001',
+    employeeName: '王小明',
+    leaveTypeId: 'lt-002',
+    leaveTypeName: '病假',
+    status: 'rejected',
+    startDate: '2026-06-15',
+    endDate: '2026-06-15',
+    days: 1,
+    reason: '感冒不適',
+    createdAt: '2026-06-14T08:30:00.000Z',
+  },
+  {
+    id: 'lr-003',
+    employeeId: 'u-001',
+    employeeName: '王小明',
+    leaveTypeId: 'lt-003',
+    leaveTypeName: '事假',
+    status: 'pending',
+    startDate: '2026-07-15',
+    endDate: '2026-07-15',
+    days: 1,
+    reason: '個人事務',
+    createdAt: '2026-07-08T10:00:00.000Z',
+  },
+]

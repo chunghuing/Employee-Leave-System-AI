@@ -1,0 +1,1 @@
+import{c as e,d as t,h as n,r}from"./index-3zAsCG2d.js";var i={};function a(r,i){return n(),t(`div`,null,[...i[0]||=[e(`h1`,null,`請假紀錄（US-004 待實作）`,-1)]])}var o=r(i,[[`render`,a]]);export{o as default};
