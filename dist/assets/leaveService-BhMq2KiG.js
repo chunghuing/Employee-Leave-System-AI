@@ -1,1 +1,0 @@
-import{n as e}from"./index-aODvc4Q3.js";async function t(){return(await e.get(`/leave-balances`)).data}async function n(){return(await e.get(`/leave-requests`)).data}async function r(t){return(await e.post(`/leave-requests`,t)).data}export{t as n,n as r,r as t};
