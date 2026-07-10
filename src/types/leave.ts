@@ -13,3 +13,10 @@ export interface LeaveRequest {
   reason: string
   createdAt: string
 }
+
+export interface CreateLeaveRequestPayload {
+  leaveTypeId: string
+  startDate: string
+  endDate: string
+  reason: string
+}
