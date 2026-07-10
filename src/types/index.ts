@@ -1,6 +1,6 @@
 export type { User, UserRole } from './user'
 export type { LeaveType } from './leaveType'
-export type { LeaveStatus, LeaveRequest } from './leave'
+export type { LeaveStatus, LeaveRequest, CreateLeaveRequestPayload } from './leave'
 export type { LeaveBalance } from './leaveBalance'
 export { ApiError } from './apiError'
 export type { LoginCredentials, LoginResult } from './auth'
