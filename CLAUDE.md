@@ -65,6 +65,14 @@ features/*  →  stores/*  →  services/*  →  Axios (services/http.ts)  →  
 - 種子資料陣列（`MOCK_` 開頭的 `const`）在需要「新增」語意的 handler（如建立請假申請）中會被直接 `push`——陣列繫結是 `const` 但內容可變，重新整理頁面即重新初始化模組狀態，天然重置為種子資料，不需要額外的重置邏輯。
 - Mock token 格式為 `` `mock-token-${userId}-${Date.now()}` ``（見 `auth.handlers.ts`）。由於 `userId` 本身含連字號（例如 `u-001`），handler 內要從 `Authorization` header 反查目前使用者時，不能用 `split('-')`，必須改用 `MOCK_USERS.find(user => token.startsWith(\`mock-token-${user.id}-\`))` 這種前綴比對（見 `leave.handlers.ts` 的 `resolveCurrentUser`）。
 
+### 設計系統
+
+- 視覺設計文件與 Pencil 原始檔在 `docs/design/`（`design-system.md` 記錄色彩／字體 token、簽名視覺與各頁面設計重點；`employee-leave-system.pen` 用 Pencil App 開啟）。進行任何視覺／樣式改動前先讀這份文件，避免顏色或字體選用偏離既有系統。
+- `src/styles/tokens.css`（由 `src/styles/main.css` `@import`）定義色彩／字體／圓角／間距的 CSS 變數，並覆蓋 Element Plus 的 `--el-color-primary`／`--el-color-success`／`--el-color-warning`／`--el-color-danger` 等變數——因此 `el-tag`／`el-button` 等元件會自動套用新色票，不需要在個別元件裡覆寫顏色。標題字體是 Noto Serif TC（`--font-display`，用於頁面標題、Hero 數字），內文與介面文字是 Noto Sans TC（`--font-body`）；字型透過 `index.html` 的 Google Fonts `<link>` 載入。
+- `src/components/LeaveRing.vue` 是整套設計的簽名視覺元件（SVG 環形進度條，props：`remaining`／`total`／`unitLabel`／`size`／`variant: 'dark' | 'light'`），出現在登入頁品牌面板、剩餘假期 Hero 卡、申請請假側邊卡等處。純 UI 元件，不呼叫 Store／Service，符合 `components/` 的規則。
+- 響應式斷點統一為 768px。`DefaultLayout.vue` 在 <768px 時側邊欄不是收合成圖示列，而是變成 **off-canvas 抽屜**：預設隱藏、頂欄漢堡選單（`Fold` icon）觸發滑出，滑出時疊加半透明遮罩，點擊遮罩或任一導覽項目會自動收合（見 `isDrawerOpen`／`closeDrawer`）。含表格的頁面（請假紀錄、待審核、HR 總覽）在同一支 `.vue` 內同時渲染桌面表格與手機卡片列表兩份 DOM，用 `@media (max-width: 767px)` 切換 `display`，而非用 JS 條件渲染——避免 resize 時的版面抖動。
+- `features/manager/*` 與 `features/hr/*`（US-005～US-008）尚未排入 Sprint，沒有對應的 Store／Service／MSW handler；但這三個頁面已套用完整視覺設計，內部用元件本地的靜態陣列（例如 `ApprovalListView.vue` 的 `PENDING_REQUESTS`）取代真實資料，操作按鈕（核准／拒絕、新增／編輯／刪除假別）點擊後呼叫 `ElMessage.info(...)` 提示「尚未串接」，而不是真的執行動作。等對應 Sprint 排入時，把這些本地陣列替換成真正的 Store／Service 串接即可，版面與樣式不需要重做。
+
 ### 命名規範（完整表格見 `docs/Architecture.md` 第 9 節）
 
 - 元件：PascalCase。Composable：camelCase，`use` 開頭。Store：檔名 `*.store.ts`，匯出 `useXStore`。Service：`*Service.ts`。型別／介面：PascalCase。常數：`UPPER_SNAKE_CASE`。MSW handler 檔：`*.handlers.ts`。`features/*` 子資料夾：kebab-case。
@@ -87,4 +95,5 @@ features/*  →  stores/*  →  services/*  →  Axios (services/http.ts)  →  
 
 - Sprint 1（`docs/Sprint-1-Issues.md` 全部 6 個 Issue）已完成：專案基礎建設、資料夾架構、API 層、身分驗證（mock 登入 + session 還原）、登入頁、以及完整的路由／Store 整合。
 - Sprint 2（`docs/Sprint-2-Issues.md` 全部 6 個 Issue）已完成：US-002～US-004（剩餘假期、申請請假、請假紀錄）的完整垂直切片，涵蓋型別與種子資料、Mock API（`leave-types`／`leave-balances`／`leave-requests`）、Service／Store 層（`leaveTypeService`、`leaveService`、`leaveBalance.store`、`leaveRequest.store`、`leaveType.store`），以及 `features/employee/*` 三個頁面的完整 UI 實作（`leave-balance`、`leave-request`、`leave-history`）。
-- `features/manager/*`（US-005～US-006，審核流程）與 `features/hr/*`（US-007～US-008，請假紀錄總覽、假別管理）底下的頁面目前仍是 placeholder，尚未排入已完成的 Sprint。
+- `features/manager/*`（US-005～US-006，審核流程）與 `features/hr/*`（US-007～US-008，請假紀錄總覽、假別管理）功能本身尚未排入已完成的 Sprint，沒有 Store／Service／MSW handler。
+- 全站視覺重新設計已完成：建立獨立設計系統（`docs/design/`、`src/styles/tokens.css`、`src/components/LeaveRing.vue`），`DefaultLayout`／`AuthLayout` 與全部 7 個頁面（含尚未排入 Sprint 的 Manager／HR 三頁）皆已套用新版面，並提供桌面版與 768px 斷點下的響應式版面（含側邊欄 off-canvas 抽屜、表格轉卡片列表）。Manager／HR 頁面目前是套用真實樣式的靜態視覺稿（本地假資料＋操作按鈕提示「尚未串接」），不是單純的文字 placeholder。
