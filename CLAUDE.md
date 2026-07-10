@@ -32,7 +32,7 @@ npm run test:watch         # vitest（互動式 watch 模式）
 features/*  →  stores/*  →  services/*  →  Axios (services/http.ts)  →  MSW 攔截 → 回傳 mock 資料
 ```
 
-- 元件／頁面一律不直接呼叫 Store 或 Service，只能透過這條鏈：`features/*` 呼叫 Store，Store 呼叫 Service，Service 呼叫共用的 Axios 實例。除了 `services/*` 之外，沒有其他地方能直接呼叫 Axios。
+- `features/*` 頁面只能呼叫 Store，不可跳過 Store 直接呼叫 Service 或 Axios；Store 呼叫 Service，Service 呼叫共用的 Axios 實例。除了 `services/*` 之外，沒有其他地方能直接呼叫 Axios。即使某個查詢很單純（例如唯讀的下拉選單資料），也要補一個對應的最小 Store（狀態 + fetch action）讓頁面透過它取得資料，而不是讓頁面直接 import Service——參考 `stores/leaveType.store.ts`。
 - `components/`（共用 UI）絕不引用 Store 或 Service——資料一律透過 props 傳入。
 - Store 之間不互相呼叫；跨領域的資料組合交由 composable 或呼叫端元件處理。
 - `features/*` 依角色垂直切分（`auth/`、`employee/`、`manager/`、`hr/`），彼此不互相 import。
@@ -61,7 +61,9 @@ features/*  →  stores/*  →  services/*  →  Axios (services/http.ts)  →  
 - `mocks/handlers/index.ts` 是合併點——每個領域的 handlers 檔（例如 `auth.handlers.ts`）都會被展開進匯出的 `handlers` 陣列。`mocks/browser.ts` 再把這個陣列接進 `setupWorker`。
 - MSW 只會在 `import.meta.env.DEV` 時啟動（見 `main.ts` 裡的 `enableMocking()` 判斷），且會在 `app.mount()` 之前完成 await，確保啟動階段的任何請求都能被攔截到。
 - `public/mockServiceWorker.js` 是用 `npx msw init public --save` 產生的——絕不手動修改，且已被排除在 ESLint 與 Prettier 檢查之外。
-- 種子資料放在 `mocks/data/`（例如 `users.ts`）。本機測試帳號（密碼皆為 `password123`）：`employee@example.com`、`manager@example.com`、`hr@example.com`。
+- 種子資料放在 `mocks/data/`（例如 `users.ts`、`leaveTypes.ts`、`leaveBalances.ts`、`leaveRequests.ts`）。本機測試帳號（密碼皆為 `password123`）：`employee@example.com`、`manager@example.com`、`hr@example.com`。
+- 種子資料陣列（`MOCK_` 開頭的 `const`）在需要「新增」語意的 handler（如建立請假申請）中會被直接 `push`——陣列繫結是 `const` 但內容可變，重新整理頁面即重新初始化模組狀態，天然重置為種子資料，不需要額外的重置邏輯。
+- Mock token 格式為 `` `mock-token-${userId}-${Date.now()}` ``（見 `auth.handlers.ts`）。由於 `userId` 本身含連字號（例如 `u-001`），handler 內要從 `Authorization` header 反查目前使用者時，不能用 `split('-')`，必須改用 `MOCK_USERS.find(user => token.startsWith(\`mock-token-${user.id}-\`))` 這種前綴比對（見 `leave.handlers.ts` 的 `resolveCurrentUser`）。
 
 ### 命名規範（完整表格見 `docs/Architecture.md` 第 9 節）
 
@@ -79,8 +81,10 @@ features/*  →  stores/*  →  services/*  →  Axios (services/http.ts)  →  
 - 一律使用 Composition API + `<script setup lang="ts">`——不使用 Options API。
 - TypeScript 嚴格模式，禁止 `any`；ESLint 使用 `@vue/eslint-config-typescript` 的 `recommendedTypeChecked`（型別感知 lint），所以新檔案必須落在 `tsconfig.app.json` 的 `include` glob 範圍內，否則 lint 會報錯。
 - Props／Emits 一律用 `defineProps`／`defineEmits` 的泛型寫法，不使用執行期宣告的寫法。
-- 不要為 Sprint 1 之後才會發生的需求（多層簽核、稽核日誌等）預先設計抽象層——這些明確不在 MVP 範圍內。
+- 不要為目前 Sprint 尚未排入的需求（多層簽核、稽核日誌等）預先設計抽象層——嚴格依照當下 Issue 的驗收標準實作，不做超出範圍的擴充。
 
 ## 目前實作狀態
 
-Sprint 1（`docs/Sprint-1-Issues.md` 中的全部 6 個 Issue）已全部完成：專案基礎建設、資料夾架構、API 層、身分驗證（mock 登入 + session 還原）、登入頁、以及完整的路由／Store 整合。`features/employee/*`、`features/manager/*`、`features/hr/*` 底下的頁面目前都還是 placeholder，實際功能（US-002 至 US-008）屬於 Sprint 2 以後的工作，尚未開始。
+- Sprint 1（`docs/Sprint-1-Issues.md` 全部 6 個 Issue）已完成：專案基礎建設、資料夾架構、API 層、身分驗證（mock 登入 + session 還原）、登入頁、以及完整的路由／Store 整合。
+- Sprint 2（`docs/Sprint-2-Issues.md` 全部 6 個 Issue）已完成：US-002～US-004（剩餘假期、申請請假、請假紀錄）的完整垂直切片，涵蓋型別與種子資料、Mock API（`leave-types`／`leave-balances`／`leave-requests`）、Service／Store 層（`leaveTypeService`、`leaveService`、`leaveBalance.store`、`leaveRequest.store`、`leaveType.store`），以及 `features/employee/*` 三個頁面的完整 UI 實作（`leave-balance`、`leave-request`、`leave-history`）。
+- `features/manager/*`（US-005～US-006，審核流程）與 `features/hr/*`（US-007～US-008，請假紀錄總覽、假別管理）底下的頁面目前仍是 placeholder，尚未排入已完成的 Sprint。
