@@ -1,0 +1,1 @@
+import{L as e,d as t,m as n,t as r}from"./_plugin-vue_export-helper-C4lJnKrl.js";var i={};function a(r,i){return e(),n(`div`,null,[...i[0]||=[t(`h1`,null,`假別管理（US-008 待實作）`,-1)]])}var o=r(i,[[`render`,a]]);export{o as default};
