@@ -16,4 +16,9 @@ export const MOCK_LEAVE_BALANCES: Record<string, LeaveBalance[]> = {
     { leaveTypeId: 'lt-002', leaveTypeName: '病假', totalDays: 30, remainingDays: 30 },
     { leaveTypeId: 'lt-003', leaveTypeName: '事假', totalDays: 14, remainingDays: 14 },
   ],
+  'u-004': [
+    { leaveTypeId: 'lt-001', leaveTypeName: '年假', totalDays: 14, remainingDays: 12 },
+    { leaveTypeId: 'lt-002', leaveTypeName: '病假', totalDays: 30, remainingDays: 29 },
+    { leaveTypeId: 'lt-003', leaveTypeName: '事假', totalDays: 14, remainingDays: 14 },
+  ],
 }

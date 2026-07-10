@@ -27,4 +27,11 @@ export const MOCK_USERS: MockUserRecord[] = [
     role: USER_ROLES.HR,
     password: 'password123',
   },
+  {
+    id: 'u-004',
+    name: '李小華',
+    email: 'employee2@example.com',
+    role: USER_ROLES.EMPLOYEE,
+    password: 'password123',
+  },
 ]
