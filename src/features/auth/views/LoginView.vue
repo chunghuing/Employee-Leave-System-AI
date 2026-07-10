@@ -54,7 +54,10 @@ async function handleSubmit() {
 
 <template>
   <div class="login-view">
-    <h1 class="login-view__title">員工請假系統</h1>
+    <div class="login-view__head">
+      <h1 class="login-view__title">歡迎回來</h1>
+      <p class="login-view__subtitle">登入以管理您的請假申請</p>
+    </div>
     <el-form
       ref="formRef"
       :model="form"
@@ -91,10 +94,22 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
+.login-view__head {
+  margin-bottom: 24px;
+}
+
 .login-view__title {
-  margin: 0 0 24px;
-  text-align: center;
-  font-size: 20px;
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.login-view__subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 .login-view__error {

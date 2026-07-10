@@ -22,8 +22,10 @@ defineProps<{
 }
 
 .page-header__title {
-  font-size: 20px;
+  font-family: var(--font-display, inherit);
+  font-size: 22px;
   font-weight: 600;
   margin: 0;
+  color: var(--text-primary, inherit);
 }
 </style>

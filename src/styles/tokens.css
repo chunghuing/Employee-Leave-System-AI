@@ -1,0 +1,54 @@
+:root {
+  --ink: #141a2e;
+  --ink-soft: #1f2742;
+  --canvas: #f4f5f9;
+  --surface: #ffffff;
+  --teal: #0f8b8d;
+  --teal-soft: #e3f2f1;
+  --amber: #f2994a;
+  --amber-soft: #fdede0;
+  --coral: #e4572e;
+  --coral-soft: #fbe7e1;
+  --moss: #2e9e6d;
+  --moss-soft: #e2f3eb;
+  --text-primary: #1c2237;
+  --text-secondary: #6b7280;
+  --text-inverse: #f4f5f9;
+  --text-muted-inverse: #8a93b3;
+  --border-color: #e5e7f0;
+
+  --font-display: 'Noto Serif TC', serif;
+  --font-body: 'Noto Sans TC', sans-serif;
+
+  --radius-card: 14px;
+  --radius-control: 8px;
+
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 20px;
+  --space-lg: 32px;
+
+  --el-color-primary: var(--teal);
+  --el-color-primary-light-3: #4aa6a6;
+  --el-color-primary-light-5: #7fc0c0;
+  --el-color-primary-light-7: #b3d9d9;
+  --el-color-primary-light-8: #cce6e6;
+  --el-color-primary-light-9: var(--teal-soft);
+  --el-color-primary-dark-2: #0c6e70;
+
+  --el-color-success: var(--moss);
+  --el-color-success-light-9: var(--moss-soft);
+  --el-color-warning: var(--amber);
+  --el-color-warning-light-9: var(--amber-soft);
+  --el-color-danger: var(--coral);
+  --el-color-danger-light-9: var(--coral-soft);
+
+  --el-border-radius-base: var(--radius-control);
+  --el-font-family: var(--font-body);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-primary);
+  --el-text-color-secondary: var(--text-secondary);
+  --el-border-color: var(--border-color);
+  --el-border-color-light: var(--border-color);
+  --el-fill-color-blank: var(--surface);
+}
