@@ -1,98 +1,116 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { CircleCheck, CircleClose, List } from '@element-plus/icons-vue'
 import PageHeader from '../../../components/PageHeader.vue'
 import BaseTable from '../../../components/BaseTable.vue'
 import LeaveStatusTag from '../../../components/LeaveStatusTag.vue'
-import type { LeaveStatus } from '../../../types'
+import EmptyState from '../../../components/EmptyState.vue'
+import ConfirmDialog from '../../../components/ConfirmDialog.vue'
+import { useApprovalStore } from '../../../stores/approval.store'
+import type { LeaveRequest } from '../../../types'
 
-interface PendingRequest {
-  [key: string]: unknown
-  id: string
-  employeeName: string
-  leaveTypeName: string
-  startDate: string
-  endDate: string
-  days: number
-  reason: string
+type ApprovalAction = 'approve' | 'reject'
+
+const approvalStore = useApprovalStore()
+
+const detailVisible = ref(false)
+const detailRequest = ref<LeaveRequest | null>(null)
+
+const confirmVisible = ref(false)
+const confirmAction = ref<ApprovalAction | null>(null)
+const confirmTarget = ref<LeaveRequest | null>(null)
+
+const confirmTitle = computed(() => (confirmAction.value === 'approve' ? '核准請假申請' : '駁回請假申請'))
+const confirmButtonText = computed(() => (confirmAction.value === 'approve' ? '核准' : '駁回'))
+const confirmMessage = computed(() => {
+  if (!confirmTarget.value || !confirmAction.value) {
+    return ''
+  }
+
+  const actionLabel = confirmAction.value === 'approve' ? '核准' : '駁回'
+
+  return `確定要${actionLabel} ${confirmTarget.value.employeeName} 的${confirmTarget.value.leaveTypeName}申請嗎？`
+})
+
+onMounted(() => {
+  void approvalStore.fetchPendingApprovals()
+})
+
+function openDetail(request: LeaveRequest) {
+  detailRequest.value = request
+  detailVisible.value = true
 }
 
-const STATS: { label: string; value: number; icon: typeof List; color: string }[] = [
-  { label: '待審核件數', value: 5, icon: List, color: 'var(--teal)' },
-  { label: '本月已核准', value: 12, icon: CircleCheck, color: 'var(--moss)' },
-  { label: '本月已拒絕', value: 2, icon: CircleClose, color: 'var(--coral)' },
-]
+function openConfirm(action: ApprovalAction, request: LeaveRequest) {
+  confirmAction.value = action
+  confirmTarget.value = request
+  confirmVisible.value = true
+}
 
-const PENDING_REQUESTS: PendingRequest[] = [
-  {
-    id: 'demo-1',
-    employeeName: '林雅婷',
-    leaveTypeName: '年假',
-    startDate: '2026-07-20',
-    endDate: '2026-07-22',
-    days: 3,
-    reason: '家庭旅遊',
-  },
-  {
-    id: 'demo-2',
-    employeeName: '張志偉',
-    leaveTypeName: '病假',
-    startDate: '2026-07-15',
-    endDate: '2026-07-15',
-    days: 1,
-    reason: '感冒回診',
-  },
-  {
-    id: 'demo-3',
-    employeeName: '李思穎',
-    leaveTypeName: '事假',
-    startDate: '2026-07-18',
-    endDate: '2026-07-19',
-    days: 2,
-    reason: '搬家整理',
-  },
-]
+function resetConfirmState() {
+  confirmVisible.value = false
+  confirmAction.value = null
+  confirmTarget.value = null
+}
 
-const PENDING_STATUS: LeaveStatus = 'pending'
+async function handleConfirm() {
+  const action = confirmAction.value
+  const target = confirmTarget.value
 
-function handleAction() {
-  ElMessage.info('審核功能尚未串接，敬請期待後續開發')
+  if (!action || !target) {
+    return
+  }
+
+  try {
+    if (action === 'approve') {
+      await approvalStore.approve(target.id)
+      ElMessage.success(`已核准 ${target.employeeName} 的請假申請`)
+    } else {
+      await approvalStore.reject(target.id)
+      ElMessage.success(`已駁回 ${target.employeeName} 的請假申請`)
+    }
+  } catch {
+    ElMessage.error(approvalStore.error ?? '操作失敗，請稍後再試')
+  } finally {
+    resetConfirmState()
+  }
 }
 </script>
 
 <template>
   <div>
     <PageHeader title="待審核" />
-
-    <div class="approval-view__stats">
-      <div v-for="stat in STATS" :key="stat.label" class="approval-view__stat-card">
-        <div class="approval-view__stat-text">
-          <span class="approval-view__stat-label">{{ stat.label }}</span>
-          <span class="approval-view__stat-value">{{ stat.value }}</span>
-        </div>
-        <div
-          class="approval-view__stat-chip"
-          :style="{ backgroundColor: `color-mix(in srgb, ${stat.color} 15%, white)` }"
-        >
-          <el-icon :size="22" :color="stat.color"><component :is="stat.icon" /></el-icon>
-        </div>
-      </div>
-    </div>
+    <p class="approval-view__sub">檢視所有待審核的請假申請，並完成核准或駁回</p>
 
     <div class="approval-view__desktop">
       <div class="approval-view__card">
-        <BaseTable :data="PENDING_REQUESTS">
+        <BaseTable :data="approvalStore.pendingRequests" :loading="approvalStore.loading">
           <el-table-column label="員工" prop="employeeName" width="140" />
           <el-table-column label="假別" prop="leaveTypeName" width="110" />
-          <el-table-column label="請假日期" width="220">
+          <el-table-column label="請假日期" width="200">
             <template #default="{ row }">{{ row.startDate }} ~ {{ row.endDate }}</template>
           </el-table-column>
           <el-table-column label="天數" prop="days" width="80" />
-          <el-table-column label="原因" prop="reason" />
-          <el-table-column label="操作" width="200">
-            <template #default>
-              <el-button size="small" type="primary" @click="handleAction">核准</el-button>
-              <el-button size="small" @click="handleAction">拒絕</el-button>
+          <el-table-column label="原因" prop="reason" show-overflow-tooltip />
+          <el-table-column label="狀態" width="100">
+            <template #default="{ row }"><LeaveStatusTag :status="row.status" /></template>
+          </el-table-column>
+          <el-table-column label="操作" width="220">
+            <template #default="{ row }">
+              <el-button size="small" @click="openDetail(row)">詳情</el-button>
+              <el-button
+                size="small"
+                type="primary"
+                :loading="approvalStore.processingId === row.id"
+                @click.stop="openConfirm('approve', row)"
+                >核准</el-button
+              >
+              <el-button
+                size="small"
+                :loading="approvalStore.processingId === row.id"
+                @click.stop="openConfirm('reject', row)"
+                >拒絕</el-button
+              >
             </template>
           </el-table-column>
         </BaseTable>
@@ -100,75 +118,90 @@ function handleAction() {
     </div>
 
     <div class="approval-view__mobile">
-      <div v-for="request in PENDING_REQUESTS" :key="request.id" class="approval-view__mobile-card">
+      <EmptyState
+        v-if="!approvalStore.loading && approvalStore.pendingRequests.length === 0"
+        description="目前沒有待審核的請假申請"
+      />
+      <div
+        v-for="request in approvalStore.pendingRequests"
+        :key="request.id"
+        class="approval-view__mobile-card"
+        @click="openDetail(request)"
+      >
         <div class="approval-view__mobile-top">
           <span class="approval-view__mobile-name"
             >{{ request.employeeName }}．{{ request.leaveTypeName }}</span
           >
-          <LeaveStatusTag :status="PENDING_STATUS" />
+          <LeaveStatusTag :status="request.status" />
         </div>
         <p class="approval-view__mobile-date">
           {{ request.startDate }} ~ {{ request.endDate }}（{{ request.days }} 天）
         </p>
         <p class="approval-view__mobile-reason">{{ request.reason }}</p>
         <div class="approval-view__mobile-actions">
-          <el-button type="primary" class="approval-view__mobile-btn" @click="handleAction"
+          <el-button
+            type="primary"
+            class="approval-view__mobile-btn"
+            :loading="approvalStore.processingId === request.id"
+            @click.stop="openConfirm('approve', request)"
             >核准</el-button
           >
-          <el-button class="approval-view__mobile-btn" @click="handleAction">拒絕</el-button>
+          <el-button
+            class="approval-view__mobile-btn"
+            :loading="approvalStore.processingId === request.id"
+            @click.stop="openConfirm('reject', request)"
+            >拒絕</el-button
+          >
         </div>
       </div>
     </div>
+
+    <el-dialog v-model="detailVisible" title="申請詳情" width="420px">
+      <div v-if="detailRequest" class="approval-view__detail">
+        <div class="approval-view__detail-row">
+          <span>員工</span>
+          <strong>{{ detailRequest.employeeName }}</strong>
+        </div>
+        <div class="approval-view__detail-row">
+          <span>假別</span>
+          <strong>{{ detailRequest.leaveTypeName }}</strong>
+        </div>
+        <div class="approval-view__detail-row">
+          <span>請假日期</span>
+          <strong>{{ detailRequest.startDate }} ~ {{ detailRequest.endDate }}（{{
+            detailRequest.days
+          }} 天）</strong>
+        </div>
+        <div class="approval-view__detail-row">
+          <span>狀態</span>
+          <LeaveStatusTag :status="detailRequest.status" />
+        </div>
+        <div class="approval-view__detail-reason">
+          <span>原因</span>
+          <p>{{ detailRequest.reason }}</p>
+        </div>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="detailVisible = false">關閉</el-button>
+      </template>
+    </el-dialog>
+
+    <ConfirmDialog
+      v-model="confirmVisible"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-text="confirmButtonText"
+      @confirm="handleConfirm"
+      @cancel="resetConfirmState"
+    />
   </div>
 </template>
 
 <style scoped>
-.approval-view__stats {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 32px;
-  flex-wrap: wrap;
-}
-
-.approval-view__stat-card {
-  flex: 1;
-  min-width: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px;
-  border-radius: var(--radius-card);
-  background-color: var(--surface);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 2px 10px rgba(28, 34, 55, 0.06);
-}
-
-.approval-view__stat-text {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.approval-view__stat-label {
-  font-size: 13px;
+.approval-view__sub {
+  margin: -8px 0 24px;
+  font-size: 14px;
   color: var(--text-secondary);
-}
-
-.approval-view__stat-value {
-  font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.approval-view__stat-chip {
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .approval-view__card {
@@ -190,6 +223,7 @@ function handleAction() {
   border-radius: var(--radius-card);
   background-color: var(--surface);
   border: 1px solid var(--border-color);
+  cursor: pointer;
 }
 
 .approval-view__mobile-top {
@@ -220,6 +254,34 @@ function handleAction() {
 
 .approval-view__mobile-btn {
   flex: 1;
+}
+
+.approval-view__detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 14px;
+}
+
+.approval-view__detail-row span {
+  color: var(--text-secondary);
+}
+
+.approval-view__detail-reason {
+  padding-top: 12px;
+}
+
+.approval-view__detail-reason span {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.approval-view__detail-reason p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--text-primary);
 }
 
 @media (max-width: 767px) {
