@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { LEAVE_STATUS } from '../../constants'
-import type { CreateLeaveRequestPayload, LeaveRequest } from '../../types'
+import type { CreateLeaveRequestPayload, LeaveRequest, LeaveStatus } from '../../types'
 import { MOCK_LEAVE_BALANCES } from '../data/leaveBalances'
 import { MOCK_LEAVE_REQUESTS } from '../data/leaveRequests'
 import { MOCK_LEAVE_TYPES } from '../data/leaveTypes'
@@ -22,6 +22,22 @@ function isValidCreatePayload(
   payload: Partial<CreateLeaveRequestPayload>,
 ): payload is CreateLeaveRequestPayload {
   return Boolean(payload.leaveTypeId && payload.startDate && payload.endDate && payload.reason)
+}
+
+function resolveApproval(id: string, nextStatus: LeaveStatus) {
+  const target = MOCK_LEAVE_REQUESTS.find((leaveRequest) => leaveRequest.id === id)
+
+  if (!target) {
+    return HttpResponse.json({ message: '找不到對應的請假申請' }, { status: 404 })
+  }
+
+  if (target.status !== LEAVE_STATUS.PENDING) {
+    return HttpResponse.json({ message: '此申請已處理，無法重複審核' }, { status: 400 })
+  }
+
+  target.status = nextStatus
+
+  return HttpResponse.json(target)
 }
 
 export const leaveHandlers = [
@@ -95,4 +111,38 @@ export const leaveHandlers = [
       return HttpResponse.json(newRequest, { status: 201 })
     },
   ),
+
+  http.get('/api/approvals/pending', ({ request }) => {
+    const user = resolveCurrentUser(request)
+
+    if (!user) {
+      return HttpResponse.json({ message: '請先登入' }, { status: 401 })
+    }
+
+    const pendingRequests = MOCK_LEAVE_REQUESTS.filter(
+      (leaveRequest) => leaveRequest.status === LEAVE_STATUS.PENDING,
+    )
+
+    return HttpResponse.json(pendingRequests)
+  }),
+
+  http.post<{ id: string }>('/api/approvals/:id/approve', ({ request, params }) => {
+    const user = resolveCurrentUser(request)
+
+    if (!user) {
+      return HttpResponse.json({ message: '請先登入' }, { status: 401 })
+    }
+
+    return resolveApproval(params.id, LEAVE_STATUS.APPROVED)
+  }),
+
+  http.post<{ id: string }>('/api/approvals/:id/reject', ({ request, params }) => {
+    const user = resolveCurrentUser(request)
+
+    if (!user) {
+      return HttpResponse.json({ message: '請先登入' }, { status: 401 })
+    }
+
+    return resolveApproval(params.id, LEAVE_STATUS.REJECTED)
+  }),
 ]
