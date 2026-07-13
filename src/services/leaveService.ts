@@ -20,3 +20,9 @@ export async function createLeaveRequest(
 
   return response.data
 }
+
+export async function getAllLeaveRequests(): Promise<LeaveRequest[]> {
+  const response = await http.get<LeaveRequest[]>('/hr/leave-records')
+
+  return response.data
+}
