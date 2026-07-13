@@ -112,6 +112,16 @@ export const leaveHandlers = [
     },
   ),
 
+  http.get('/api/hr/leave-records', ({ request }) => {
+    const user = resolveCurrentUser(request)
+
+    if (!user) {
+      return HttpResponse.json({ message: '請先登入' }, { status: 401 })
+    }
+
+    return HttpResponse.json(MOCK_LEAVE_REQUESTS)
+  }),
+
   http.get('/api/approvals/pending', ({ request }) => {
     const user = resolveCurrentUser(request)
 
