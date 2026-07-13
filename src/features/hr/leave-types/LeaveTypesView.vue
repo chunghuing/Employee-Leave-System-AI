@@ -1,25 +1,132 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Delete, Edit } from '@element-plus/icons-vue'
 import PageHeader from '../../../components/PageHeader.vue'
 import BaseTable from '../../../components/BaseTable.vue'
+import EmptyState from '../../../components/EmptyState.vue'
+import ConfirmDialog from '../../../components/ConfirmDialog.vue'
+import { useLeaveTypeStore } from '../../../stores/leaveType.store'
+import type { CreateLeaveTypePayload, LeaveType } from '../../../types'
 
-interface LeaveTypeRow {
-  [key: string]: unknown
-  id: string
-  name: string
-  annualDays: string
-  description: string
+type FormMode = 'create' | 'edit'
+
+const leaveTypeStore = useLeaveTypeStore()
+
+const formRef = ref<FormInstance>()
+const formVisible = ref(false)
+const formMode = ref<FormMode>('create')
+const editingId = ref<string | null>(null)
+const form = reactive<CreateLeaveTypePayload>({
+  name: '',
+  totalDays: 0,
+  description: '',
+})
+
+const rules: FormRules = {
+  name: [{ required: true, message: '請輸入假別名稱', trigger: 'blur' }],
+  totalDays: [
+    { required: true, message: '請輸入年度天數', trigger: 'blur' },
+    { type: 'number', min: 1, message: '年度天數需為正整數', trigger: 'blur' },
+  ],
+  description: [{ required: true, message: '請輸入說明', trigger: 'blur' }],
 }
 
-const LEAVE_TYPES: LeaveTypeRow[] = [
-  { id: 'lt-001', name: '年假', annualDays: '18 天', description: '滿一年後每年享有的特休假' },
-  { id: 'lt-002', name: '病假', annualDays: '30 天', description: '因病就診或休養使用' },
-  { id: 'lt-003', name: '事假', annualDays: '14 天', description: '處理個人重要事務使用' },
-]
+const formSubmitting = computed(() =>
+  formMode.value === 'create'
+    ? leaveTypeStore.submitting
+    : leaveTypeStore.processingId === editingId.value,
+)
 
-function handleAction() {
-  ElMessage.info('假別管理功能尚未串接，敬請期待後續開發')
+const deleteConfirmVisible = ref(false)
+const deleteTarget = ref<LeaveType | null>(null)
+const deleteConfirmMessage = computed(() =>
+  deleteTarget.value ? `確定要刪除「${deleteTarget.value.name}」嗎？此動作無法復原。` : '',
+)
+
+onMounted(() => {
+  void leaveTypeStore.fetchLeaveTypes()
+})
+
+function resetForm() {
+  form.name = ''
+  form.totalDays = 0
+  form.description = ''
+}
+
+function openCreateForm() {
+  formMode.value = 'create'
+  editingId.value = null
+  resetForm()
+  formRef.value?.clearValidate()
+  formVisible.value = true
+}
+
+function openEditForm(leaveType: LeaveType) {
+  formMode.value = 'edit'
+  editingId.value = leaveType.id
+  form.name = leaveType.name
+  form.totalDays = leaveType.totalDays
+  form.description = leaveType.description
+  formRef.value?.clearValidate()
+  formVisible.value = true
+}
+
+async function handleFormSubmit() {
+  const formEl = formRef.value
+  if (!formEl) {
+    return
+  }
+
+  const valid = await formEl.validate().catch(() => false)
+  if (!valid) {
+    return
+  }
+
+  const payload: CreateLeaveTypePayload = {
+    name: form.name,
+    totalDays: form.totalDays,
+    description: form.description,
+  }
+
+  try {
+    if (formMode.value === 'create') {
+      await leaveTypeStore.createLeaveType(payload)
+      ElMessage.success('假別已新增')
+    } else if (editingId.value) {
+      await leaveTypeStore.updateLeaveType(editingId.value, payload)
+      ElMessage.success('假別已更新')
+    }
+    formVisible.value = false
+  } catch {
+    ElMessage.error(leaveTypeStore.error ?? '操作失敗，請稍後再試')
+  }
+}
+
+function openDeleteConfirm(leaveType: LeaveType) {
+  deleteTarget.value = leaveType
+  deleteConfirmVisible.value = true
+}
+
+function resetDeleteConfirmState() {
+  deleteConfirmVisible.value = false
+  deleteTarget.value = null
+}
+
+async function handleDeleteConfirm() {
+  const target = deleteTarget.value
+  if (!target) {
+    return
+  }
+
+  try {
+    await leaveTypeStore.deleteLeaveType(target.id)
+    ElMessage.success(`已刪除「${target.name}」`)
+  } catch {
+    ElMessage.error(leaveTypeStore.error ?? '刪除失敗，請稍後再試')
+  } finally {
+    resetDeleteConfirmState()
+  }
 }
 </script>
 
@@ -29,22 +136,24 @@ function handleAction() {
 
     <div class="leave-types-view__header-bar">
       <p class="leave-types-view__sub">管理公司提供的假別與年度天數</p>
-      <el-button type="primary" @click="handleAction">＋ 新增假別</el-button>
+      <el-button type="primary" @click="openCreateForm">＋ 新增假別</el-button>
     </div>
 
     <div class="leave-types-view__desktop">
       <div class="leave-types-view__card">
-        <BaseTable :data="LEAVE_TYPES">
+        <BaseTable :data="leaveTypeStore.leaveTypes" :loading="leaveTypeStore.loading">
           <el-table-column label="假別名稱" prop="name" width="220" />
-          <el-table-column label="年度天數" prop="annualDays" width="140" />
+          <el-table-column label="年度天數" width="140">
+            <template #default="{ row }">{{ row.totalDays }} 天</template>
+          </el-table-column>
           <el-table-column label="說明" prop="description" />
           <el-table-column label="操作" width="120">
-            <template #default>
+            <template #default="{ row }">
               <el-icon
                 :size="17"
                 color="var(--teal)"
                 class="leave-types-view__action-icon"
-                @click="handleAction"
+                @click="openEditForm(row)"
               >
                 <Edit />
               </el-icon>
@@ -52,7 +161,7 @@ function handleAction() {
                 :size="17"
                 color="var(--coral)"
                 class="leave-types-view__action-icon"
-                @click="handleAction"
+                @click="openDeleteConfirm(row)"
               >
                 <Delete />
               </el-icon>
@@ -62,18 +171,63 @@ function handleAction() {
       </div>
     </div>
 
-    <div class="leave-types-view__mobile">
-      <div v-for="type in LEAVE_TYPES" :key="type.id" class="leave-types-view__mobile-card">
+    <div v-loading="leaveTypeStore.loading" class="leave-types-view__mobile">
+      <EmptyState v-if="leaveTypeStore.leaveTypes.length === 0" />
+      <div
+        v-for="type in leaveTypeStore.leaveTypes"
+        :key="type.id"
+        class="leave-types-view__mobile-card"
+      >
         <div class="leave-types-view__mobile-top">
-          <span class="leave-types-view__mobile-name">{{ type.name }}．{{ type.annualDays }}</span>
+          <span class="leave-types-view__mobile-name">{{ type.name }}．{{ type.totalDays }} 天</span>
           <div class="leave-types-view__mobile-icons">
-            <el-icon :size="16" color="var(--teal)" @click="handleAction"><Edit /></el-icon>
-            <el-icon :size="16" color="var(--coral)" @click="handleAction"><Delete /></el-icon>
+            <el-icon :size="16" color="var(--teal)" @click="openEditForm(type)"><Edit /></el-icon>
+            <el-icon :size="16" color="var(--coral)" @click="openDeleteConfirm(type)">
+              <Delete />
+            </el-icon>
           </div>
         </div>
         <p class="leave-types-view__mobile-desc">{{ type.description }}</p>
       </div>
     </div>
+
+    <el-dialog
+      v-model="formVisible"
+      :title="formMode === 'create' ? '新增假別' : '編輯假別'"
+      width="420px"
+    >
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
+        <el-form-item label="假別名稱" prop="name">
+          <el-input v-model="form.name" placeholder="請輸入假別名稱" />
+        </el-form-item>
+        <el-form-item label="年度天數" prop="totalDays">
+          <el-input-number v-model="form.totalDays" :min="1" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="說明" prop="description">
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="3"
+            placeholder="請輸入假別說明"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="formVisible = false">取消</el-button>
+        <el-button type="primary" :loading="formSubmitting" @click="handleFormSubmit">
+          送出
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <ConfirmDialog
+      v-model="deleteConfirmVisible"
+      title="刪除假別"
+      :message="deleteConfirmMessage"
+      confirm-text="刪除"
+      @confirm="handleDeleteConfirm"
+      @cancel="resetDeleteConfirmState"
+    />
   </div>
 </template>
 
