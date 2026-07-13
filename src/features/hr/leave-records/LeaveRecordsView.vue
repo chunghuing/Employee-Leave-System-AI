@@ -1,93 +1,73 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import PageHeader from '../../../components/PageHeader.vue'
 import BaseTable from '../../../components/BaseTable.vue'
 import LeaveStatusTag from '../../../components/LeaveStatusTag.vue'
-import type { LeaveStatus } from '../../../types'
+import EmptyState from '../../../components/EmptyState.vue'
+import { useLeaveRecordStore } from '../../../stores/leaveRecord.store'
+import { useLeaveTypeStore } from '../../../stores/leaveType.store'
 
-interface OrgRecord {
-  [key: string]: unknown
-  id: string
-  employeeName: string
-  leaveTypeName: string
-  startDate: string
-  endDate: string
-  days: number
-  status: LeaveStatus
-}
+const leaveRecordStore = useLeaveRecordStore()
+const leaveTypeStore = useLeaveTypeStore()
 
-const RECORDS: OrgRecord[] = [
-  {
-    id: 'demo-1',
-    employeeName: '林雅婷',
-    leaveTypeName: '年假',
-    startDate: '2026-07-20',
-    endDate: '2026-07-22',
-    days: 3,
-    status: 'pending',
-  },
-  {
-    id: 'demo-2',
-    employeeName: '張志偉',
-    leaveTypeName: '病假',
-    startDate: '2026-07-15',
-    endDate: '2026-07-15',
-    days: 1,
-    status: 'approved',
-  },
-  {
-    id: 'demo-3',
-    employeeName: '李思穎',
-    leaveTypeName: '事假',
-    startDate: '2026-07-18',
-    endDate: '2026-07-19',
-    days: 2,
-    status: 'pending',
-  },
-  {
-    id: 'demo-4',
-    employeeName: '王小明',
-    leaveTypeName: '年假',
-    startDate: '2026-06-01',
-    endDate: '2026-06-03',
-    days: 3,
-    status: 'approved',
-  },
-  {
-    id: 'demo-5',
-    employeeName: '黃俊傑',
-    leaveTypeName: '事假',
-    startDate: '2026-05-09',
-    endDate: '2026-05-09',
-    days: 1,
-    status: 'rejected',
-  },
-]
+onMounted(() => {
+  void leaveRecordStore.fetchAllRecords()
+  void leaveTypeStore.fetchLeaveTypes()
+})
 </script>
 
 <template>
   <div>
     <PageHeader title="請假紀錄總覽" />
 
+    <el-alert
+      v-if="leaveRecordStore.error"
+      :title="leaveRecordStore.error"
+      type="error"
+      show-icon
+      :closable="false"
+      class="leave-records-view__error"
+    />
+
     <div class="leave-records-view__filters">
-      <div class="leave-records-view__search">
-        <el-icon :size="16" color="var(--text-secondary, #6b7280)"><Search /></el-icon>
-        <span class="leave-records-view__search-placeholder">搜尋員工姓名</span>
-      </div>
+      <el-input
+        v-model="leaveRecordStore.searchKeyword"
+        placeholder="搜尋員工姓名"
+        clearable
+        class="leave-records-view__search"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
       <el-select placeholder="全部狀態" class="leave-records-view__status-filter">
         <el-option label="全部狀態" value="all" />
         <el-option label="待審核" value="pending" />
         <el-option label="已核准" value="approved" />
         <el-option label="已拒絕" value="rejected" />
       </el-select>
+      <el-select
+        v-model="leaveRecordStore.leaveTypeFilter"
+        placeholder="全部假別"
+        clearable
+        class="leave-records-view__type-filter"
+      >
+        <el-option
+          v-for="leaveType in leaveTypeStore.leaveTypes"
+          :key="leaveType.id"
+          :label="leaveType.name"
+          :value="leaveType.id"
+        />
+      </el-select>
     </div>
 
     <div class="leave-records-view__desktop">
       <div class="leave-records-view__card">
-        <BaseTable :data="RECORDS">
+        <BaseTable :data="leaveRecordStore.filteredRecords" :loading="leaveRecordStore.loading">
           <el-table-column label="員工" prop="employeeName" width="160" />
           <el-table-column label="假別" prop="leaveTypeName" width="110" />
-          <el-table-column label="請假日期" width="220">
+          <el-table-column label="請假日期" prop="startDate" width="220" sortable>
             <template #default="{ row }">{{ row.startDate }} ~ {{ row.endDate }}</template>
           </el-table-column>
           <el-table-column label="天數" prop="days" width="80" />
@@ -100,8 +80,13 @@ const RECORDS: OrgRecord[] = [
       </div>
     </div>
 
-    <div class="leave-records-view__mobile">
-      <div v-for="record in RECORDS" :key="record.id" class="leave-records-view__mobile-card">
+    <div v-loading="leaveRecordStore.loading" class="leave-records-view__mobile">
+      <EmptyState v-if="leaveRecordStore.filteredRecords.length === 0" />
+      <div
+        v-for="record in leaveRecordStore.filteredRecords"
+        :key="record.id"
+        class="leave-records-view__mobile-card"
+      >
         <div class="leave-records-view__mobile-top">
           <span class="leave-records-view__mobile-name">{{ record.employeeName }}</span>
           <LeaveStatusTag :status="record.status" />
@@ -118,6 +103,10 @@ const RECORDS: OrgRecord[] = [
 </template>
 
 <style scoped>
+.leave-records-view__error {
+  margin-bottom: 16px;
+}
+
 .leave-records-view__filters {
   display: flex;
   gap: 16px;
@@ -126,24 +115,12 @@ const RECORDS: OrgRecord[] = [
 }
 
 .leave-records-view__search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 14px;
-  height: 40px;
   width: 320px;
   max-width: 100%;
-  border-radius: var(--radius-control);
-  background-color: var(--surface);
-  border: 1px solid var(--border-color);
 }
 
-.leave-records-view__search-placeholder {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.leave-records-view__status-filter {
+.leave-records-view__status-filter,
+.leave-records-view__type-filter {
   width: 160px;
 }
 
