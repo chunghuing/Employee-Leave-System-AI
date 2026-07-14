@@ -8,7 +8,7 @@ import { hrRoutes } from './routes/hr.routes'
 import { setupRouterGuards } from './guards'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', redirect: { name: ROUTE_NAMES.LOGIN } },
     ...authRoutes,

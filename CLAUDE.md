@@ -59,7 +59,7 @@ features/*  →  stores/*  →  services/*  →  Axios (services/http.ts)  →  
 
 - `services/http.ts` 匯出唯一的 Axios 實例（`baseURL: '/api'`），所有 Service 都必須透過它。請求攔截器會從 `localStorage` 附加 bearer token；回應攔截器會把任何失敗統一轉成 `ApiError`（`types/apiError.ts`，繼承 `Error`——用 `new ApiError(message, status)` 拋出，而非普通物件，因為 `@typescript-eslint/prefer-promise-reject-errors` 要求必須是真正的 `Error`）。
 - `mocks/handlers/index.ts` 是合併點——每個領域的 handlers 檔（例如 `auth.handlers.ts`）都會被展開進匯出的 `handlers` 陣列。`mocks/browser.ts` 再把這個陣列接進 `setupWorker`。
-- MSW 只會在 `import.meta.env.DEV` 時啟動（見 `main.ts` 裡的 `enableMocking()` 判斷），且會在 `app.mount()` 之前完成 await，確保啟動階段的任何請求都能被攔截到。
+- MSW 在所有環境（`dev`／`build` 正式版）皆會啟動（見 `main.ts` 裡的 `enableMocking()`），且會在 `app.mount()` 之前完成 await，確保啟動階段的任何請求都能被攔截到——因為本專案沒有真實後端，GitHub Pages 部署版也必須靠 MSW 提供 API 回應，所以刻意不用 `import.meta.env.DEV` 判斷把它限制在開發模式。`worker.start()` 會透過 `serviceWorker: { url: \`${import.meta.env.BASE_URL}mockServiceWorker.js\` } }` 指定服務範圍，對應 `vite.config.ts` 的 `base: '/Employee-Leave-System-AI/'`（GitHub Pages 子路徑部署），否則瀏覽器會去網域根目錄找 `mockServiceWorker.js` 而註冊失敗。
 - `public/mockServiceWorker.js` 是用 `npx msw init public --save` 產生的——絕不手動修改，且已被排除在 ESLint 與 Prettier 檢查之外。
 - 種子資料放在 `mocks/data/`（例如 `users.ts`、`leaveTypes.ts`、`leaveBalances.ts`、`leaveRequests.ts`）。本機測試帳號（密碼皆為 `password123`）：`employee@example.com`、`manager@example.com`、`hr@example.com`。
 - 種子資料陣列（`MOCK_` 開頭的 `const`）在需要「新增」語意的 handler（如建立請假申請）中會被直接 `push`——陣列繫結是 `const` 但內容可變，重新整理頁面即重新初始化模組狀態，天然重置為種子資料，不需要額外的重置邏輯。
