@@ -1,0 +1,1 @@
+import{n as e}from"./index-BGPzvtRF.js";async function t(){return(await e.get(`/leave-balances`)).data}async function n(){return(await e.get(`/leave-requests`)).data}async function r(t){return(await e.post(`/leave-requests`,t)).data}async function i(){return(await e.get(`/hr/leave-records`)).data}export{n as i,i as n,t as r,r as t};

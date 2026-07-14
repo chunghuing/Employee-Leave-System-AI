@@ -1,0 +1,1 @@
+import{g as e,z as t}from"./index-BGPzvtRF.js";import{r as n}from"./leaveService-hQhJd-Cf.js";var r=e(`leaveBalance`,()=>{let e=t([]),r=t(!1),i=t(null);async function a(){r.value=!0,i.value=null;try{e.value=await n()}catch(e){i.value=e instanceof Error?e.message:String(e)}finally{r.value=!1}}return{balances:e,loading:r,error:i,fetchBalance:a}});export{r as t};
